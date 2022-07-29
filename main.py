@@ -1,151 +1,47 @@
-import os
-import re
 from argparse import ArgumentParser
 
-logger = """import logging
+from image2ascii import convert_image
 
 
-class Format(logging.Formatter):
-    grey = "\\x1b[38;21m"
-    yellow = "\\x1b[33;21m"
-    red = "\\x1b[31;21m"
-    bold_red = "\\x1b[31;1m"
-    reset = "\\x1b[0m"
-    green = "\\x1b[32m"
-    asctime = "%(asctime)s"
-    name = "[%(name)s]"
-    levelname = "[%(levelname)-4s]"
-    message = "%(message)s"
+DESCRIPTION = '''This program converts an image to
+ASCII and saves it in png and txt files'''
 
-    FORMATS = {
-        logging.DEBUG: f"{asctime} {grey} {name} {levelname} {reset} {message}",
-        logging.INFO: f"{asctime} {green} {name} {levelname} {reset} {message}",
-        logging.WARNING: f"{asctime} {yellow} {name} {levelname} {message} {reset}",
-        logging.ERROR: f"{asctime} {red} {name} {levelname} {message} {reset}",
-        logging.CRITICAL: f"{asctime} {bold_red} {name} {levelname} {message} {reset}",
-    }
+FORMAT_HELP = '''PNG tells the program that the output is an
+image, TXT indicates the output is in plain text and
+and BOTH indicates both formats'''
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
-def create_logger(logger_name: str) -> logging.Logger:
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(level=logging.DEBUG)
-
-    # create formatter and add it to the handlers
-    formatter = Format()
-
-    # file
-    file = logging.FileHandler(f"{logger_name}.log")
-    file.setLevel(level=logging.DEBUG)
-    file.setFormatter(formatter)
-
-    # console
-    console = logging.StreamHandler()
-    console.setLevel(level=logging.DEBUG)
-    console.setFormatter(formatter)
-
-    logger.addHandler(file)
-    logger.addHandler(console)
-
-    return logger
-"""
-
-
-config = """from pydantic import BaseSettings, Field
-
-
-class Settings(BaseSettings):
-    ...
-
-
-settings = Settings()
-"""
-
-
-def generate_directories(args):
-    # generate the root directory of the source code
-    os.makedirs(args.name, exist_ok=True)
-
-    if args.tests:
-        # the directory that will contains the tests files
-        os.makedirs("tests", exist_ok=True)
-
-
-def generate_files(args):
-    # in order to consider the root directory as a python library directory
-    open(os.path.join(args.name, "__init__.py"), "w").close()
-
-    if args.config:
-        with open(os.path.join(args.name, "config.py"), "w") as file:
-            file.write(config)
-
-    if args.logger:
-        with open(os.path.join(args.name, "logger.py"), "w") as file:
-            file.write(logger)
-
-
-def configure_poetry_project(args):
-    description = input("Write a project description: ") or "Default description"
-
-    output_lines = []
-    with open("pyproject.toml") as file:
-        for line in file.readlines():
-            if "name = " in line:
-                line = re.sub(r"\"[\w\s-]+\"", f"\"{args.name}\"", line)
-            if "description = " in line:
-                line = re.sub(r"\"[\w\s-]+\"", f"\"{description}\"", line)
-
-            if "[tool.poetry.dev-dependencies]" in line:
-                if args.config:
-                    output_lines[-1] = "pydantic = \"*\"\n"
-                    output_lines.append("\n")
-
-            output_lines.append(line)
-
-    with open("pyproject.toml", "w") as file:
-        for line in output_lines:
-            file.write(line)
+INVERT_HELP = '''invert output image. Use if your display has
+a dark background'''
 
 
 def execute(args):
-    if args.all:
-        args.tests = True
-        args.config = True
-        args.logger = True
-
-    generate_directories(args)
-    generate_files(args)
-    configure_poetry_project(args)
+    convert_image(input_filename=args.input, output_filename=args.output)
 
 
-def main():
-    parser = ArgumentParser()
+def main() -> None:
+    parser = ArgumentParser(description=DESCRIPTION)
 
     parser.add_argument(
-        "-n", "--name", default="app", help="name of the project"
+        '-i', '--input', type=str, metavar='INPUT',
+        help='name of the input image'
     )
     parser.add_argument(
-        "-t", "--tests", action="store_true",
-        help="If the project will be tested"
+        '-o', '--output', default='ascii', type=str,
+        help='names of the output file without format'
     )
     parser.add_argument(
-        "-c", "--config", action="store_true",
-        help="If the project need enviroment variables"
+        '--format', default='PNG', metavar='PNG/TXT/BOTH',
+        choices=['PNG', 'TXT', 'BOTH'], help=FORMAT_HELP,
     )
     parser.add_argument(
-        "-l", "--logger", action="store_true",
-        help="If the project will have a logger system"
+        '-f', '--font', default='', type=str,
+        help='font to be used for the conversion'
     )
     parser.add_argument(
-        "-a", "--all", action="store_true", help="To add all generated files",
+        '--invert', action='store_true', help=INVERT_HELP
     )
 
     args = parser.parse_args()
-    print(args)
     execute(args)
 
 
