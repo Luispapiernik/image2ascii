@@ -13,15 +13,19 @@ def get_gray_image(filename: str) -> Image.Image:
     return gray
 
 
-def image_to_ascii(image: Image.Image, ascii_color_palette: str) -> AsciiImage:
+def image_to_ascii(
+    image: Image.Image, ascii_color_palette: str, ratio: float = 1
+) -> AsciiImage:
     pixels = image.getdata()
 
     groups_number = 256 / len(ascii_color_palette)
     char_data = [ascii_color_palette[int(pixel / groups_number)] for pixel in pixels]
 
+    integer_ratio = 0
     ascii_image = [
         char_data[index : index + image.width]
         for index in range(0, len(char_data), image.width)
+        if (image.width // index) % integer_ratio == 0
     ]
 
     return ascii_image
