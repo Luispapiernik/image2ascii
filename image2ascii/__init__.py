@@ -1,6 +1,7 @@
-from PIL import Image, ImageDraw
+import numpy as np
+from PIL import Image
 
-from image2ascii.schemas import Formats
+from image2ascii.schemas import Visualizers
 from image2ascii.utils import get_gray_image, image_to_ascii
 
 __all__ = ["convert_image"]
@@ -10,14 +11,16 @@ def convert_image(
     input_filename: str,
     output_filename: str,
     ascii_palette: str,
-    format: str = Formats.TXT,
+    format: str = Visualizers.TXT,
     ratio: float = 1,
 ) -> None:
     gray_image = get_gray_image(filename=input_filename)
 
-    ascii_image = image_to_ascii(image=gray_image, ascii_color_palette=ascii_palette)
+    ascii_image = image_to_ascii(
+        image_array=np.array(gray_image), ascii_palette=ascii_palette, ratio=ratio
+    )
 
-    if format == Formats.TXT:
+    if format == Visualizers.TXT:
         with open(f"{output_filename}.txt", "w") as file:
             for line in ascii_image:
                 file.write("".join(line))
